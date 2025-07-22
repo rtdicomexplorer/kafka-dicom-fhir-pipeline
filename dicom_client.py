@@ -1,34 +1,54 @@
-# dicom_client.py
-from pynetdicom import AE, debug_logger
-from pynetdicom.sop_class import CTImageStorage
 import os
+from pydicom import dcmread
+from pynetdicom import AE, debug_logger
+from pynetdicom.sop_class import CTImageStorage, MRImageStorage
 
-# Optional: turn on debug logs
+# Optional: Enable verbose DICOM logs
 # debug_logger()
 
-# Path to your DICOM file
-DICOM_PATH = "sample_ct.dcm"
+# Configuration
+DICOM_FOLDER = "./study_folder"  # folder containing .dcm files
+REMOTE_HOST = "localhost"
+REMOTE_PORT = 11112
+AE_TITLE = "MODALITY"
 
-# Set up the application entity (modality)
-ae = AE()
+
+
+
+
+
+# Create Application Entity
+ae = AE(ae_title=AE_TITLE)
+
+# Add supported presentation contexts
 ae.add_requested_context(CTImageStorage)
+ae.add_requested_context(MRImageStorage)
 
-# Define the PACS/server address and port (you'll simulate this next)
-assoc = ae.associate('localhost', 11112)
+# Establish association with receiver
+assoc = ae.associate(REMOTE_HOST, REMOTE_PORT)
 
 if assoc.is_established:
-    print("✅ Step 0: Association established with server")
-    # Send the DICOM file
-    from pydicom import dcmread
-    ds = dcmread(DICOM_PATH)
+    print(f"📡 Association established with {REMOTE_HOST}:{REMOTE_PORT}")
 
-    status = assoc.send_c_store(ds)
-    print(f"📤 Step 1: Sending DICOM file {DICOM_PATH} via C-STORE...")
-    if status:
-        print(f"✅ Step 2: C-STORE request sent. Status: 0x{status.Status:04x}")
-    else:
-        print("❌ Step 2: Failed to send DICOM file")
+    # Loop through all DICOM files in the folder
+    for filename in os.listdir(DICOM_FOLDER):
+        if filename.lower().endswith(".dcm"):
+            filepath = os.path.join(DICOM_FOLDER, filename)
+            try:
+                ds = dcmread(filepath)
+
+                print(f"📤 Sending file: {filename} (SOPInstanceUID={ds.SOPInstanceUID})")
+                status = assoc.send_c_store(ds)
+
+                if status:
+                    print(f"✅ Sent: {filename} - Status: 0x{status.Status:04x}")
+                else:
+                    print(f"❌ Failed to send: {filename}")
+
+            except Exception as e:
+                print(f"⚠️ Error reading or sending file {filename}: {e}")
+
     assoc.release()
-    print("🔌 Step 3: Association released")
+    print("🔌 Association released.")
 else:
-    print("❌ Association rejected or aborted")
+    print("❌ Could not establish association.")

@@ -1,66 +1,104 @@
-# consumer_fhir_uploader.py
-from kafka import KafkaConsumer
+import uuid
 import json
+import os
 import requests
+from kafka import KafkaConsumer
 
-FHIR_SERVER = "http://localhost:8080/fhir"  # Use your FHIR server
+FHIR_SERVER = "http://localhost:8080/fhir"  # Your FHIR server URL
 
 consumer = KafkaConsumer(
-    "imaging.metadata",
+    "imaging.study.ready",
     bootstrap_servers='localhost:9092',
-    auto_offset_reset='earliest',  # <-- Important
+    auto_offset_reset='earliest',
     enable_auto_commit=True,
     group_id="fhir-uploader-group",
     value_deserializer=lambda m: json.loads(m.decode('utf-8'))
 )
 
-print("Consumer uploaded: started")
-print("👂 Waiting for messages on topic 'imaging.metadata'...")
+print("Consumer uploader: started")
+print("👂 Waiting for messages on topic 'imaging.study.ready'...")
+
+def parse_patient_name(name_str):
+    parts = name_str.split("^")
+    return {
+        "family": parts[0] if len(parts) > 0 else "Unknown",
+        "given": [parts[1]] if len(parts) > 1 else ["Unknown"]
+    }
+
+patient_gender_map = {"M": "male", "F": "female", "O": "other", "U": "unknown"}
 
 for msg in consumer:
-    metadata = msg.value
-    print(f"📥 Step 8: Received metadata from 'imaging.metadata': {metadata}")
+    study = msg.value
 
-    patient_id = metadata["patient_id"]
-    modality_code = metadata["modality"]
+    # Prepare identifiers and UUID for linking
+    patient_identifier_value = study.get("accession_number") or f"{study['patient_id']}"
+    temp_patient_uuid = f"urn:uuid:{uuid.uuid4()}"
+
+    # Parse patient name and gender
+    patient_name_str = study.get("patient_name", "Test^Patient")
+    patient_name = parse_patient_name(patient_name_str)
+    patient_gender = patient_gender_map.get(study.get("patient_sex", "").upper(), None)
+
+    # Build series map for ImagingStudy
+    series_map = {}
+    for inst in study["instances"]:
+        sid = inst["series_uid"]
+        if sid not in series_map:
+            series_map[sid] = {
+                "uid": sid,
+                "modality": {
+                    "system": "http://dicom.nema.org/resources/ontology/DCM",
+                    "code": inst["modality"]
+                },
+                "instance": []
+            }
+        series_map[sid]["instance"].append({
+            "uid": inst["sop_instance_uid"]
+        })
+
+    # Build Patient resource without fixed ID
+    patient_resource = {
+        "resourceType": "Patient",
+        "identifier": [{
+            "system": "http://hospital.smartcare.org/patients",
+            "value": patient_identifier_value
+        }],
+        "name": [{
+            "use": "official",
+            "family": patient_name["family"],
+            "given": patient_name["given"]
+        }]
+    }
+    if patient_gender:
+        patient_resource["gender"] = patient_gender
+
+    # Build ImagingStudy resource referencing Patient by UUID
+    imaging_study = {
+        "resourceType": "ImagingStudy",
+        "subject": {"reference": temp_patient_uuid},
+        "started": study["scan_time"],
+        "identifier": [{
+            "system": "urn:dicom:uid",
+            "value": study["study_uid"]
+        }],
+        "series": list(series_map.values())
+    }
+
+    # Build transaction Bundle
     bundle = {
         "resourceType": "Bundle",
         "type": "transaction",
         "entry": [
             {
-                "fullUrl": f"urn:uuid:patient-{patient_id}",
-                "resource": {
-                    "resourceType": "Patient",
-                    "id": patient_id,
-                    "identifier": [{
-                        "system": "http://hospital.smartcare.org/patients",
-                        "value": patient_id
-                    }],
-                    "name": [{
-                        "use": "official",
-                        "family": "Test",
-                        "given": ["Patient"]
-                    }]
-                },
+                "fullUrl": temp_patient_uuid,
+                "resource": patient_resource,
                 "request": {
-                    "method": "PUT",
-                    "url": f"Patient/{patient_id}"
+                    "method": "POST",
+                    "url": "Patient"
                 }
             },
             {
-                "resource": {
-                    "resourceType": "ImagingStudy",
-                    "subject": {
-                        "reference": f"Patient/{patient_id}"
-                    },
-                    "modality": [
-                        {
-                            "system": "http://dicom.nema.org/resources/ontology/DCM",
-                            "code": modality_code
-                        }
-                    ],
-                    "started": metadata["scan_time"]
-                },
+                "resource": imaging_study,
                 "request": {
                     "method": "POST",
                     "url": "ImagingStudy"
@@ -69,24 +107,21 @@ for msg in consumer:
         ]
     }
 
+    # Save bundle to disk
+    os.makedirs("bundles", exist_ok=True)
+    bundle_filename = f"bundles/imagingstudy_bundle_{study['study_uid']}.json"
+    with open(bundle_filename, "w", encoding="utf-8") as f:
+        json.dump(bundle, f, indent=2)
+    print(f"💾 Saved FHIR bundle to: {bundle_filename}")
 
-    # imaging_study = {
-    #     "resourceType": "ImagingStudy",
-    #     "subject": {
-    #         "reference": f"Patient/{metadata['patient_id']}"
-    #     },
-    #     "modality": [
-    #         {
-    #             "system": "http://dicom.nema.org/resources/ontology/DCM",
-    #             "code": metadata["modality"]
-    #         }
-    #     ],
-    #     "started": metadata["scan_time"]
-    # }
-    print("📦 Step 9: Sending Bundle (Patient + ImagingStudy) to FHIR server...")
-    response = requests.post(f"{FHIR_SERVER}", json=bundle)
-     
-    if response.status_code == 201:
-        print(f"✅ Step 10: ImagingStudy created successfully for Patient {metadata['patient_id']}")
+    # POST the bundle to your FHIR server
+    print(f"📦 Sending ImagingStudy bundle for Study UID: {study['study_uid']}")
+    response = requests.post(
+        FHIR_SERVER,
+        json=bundle,
+        headers={"Content-Type": "application/fhir+json"}
+    )
+    if response.status_code in [200, 201]:
+        print("✅ ImagingStudy uploaded successfully.")
     else:
-        print(f"❌ Step 10: Failed to create ImagingStudy. Status: {response.status_code}, Body: {response.text}")
+        print(f"❌ Failed to upload ImagingStudy. {response.status_code}: {response.text}")
