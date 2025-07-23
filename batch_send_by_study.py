@@ -1,4 +1,5 @@
 # batch_send_by_study.py
+# the main script 
 import os
 import time
 from collections import defaultdict

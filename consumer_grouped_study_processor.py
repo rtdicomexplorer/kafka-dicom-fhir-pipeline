@@ -27,7 +27,7 @@ producer = KafkaProducer(
 # Store incoming files grouped by StudyInstanceUID
 study_files = {}
 study_cache = TTLCache(maxsize=100, ttl=10)  # TTL to auto-clear if inactive for 10 seconds
-print("consumer_processor: started'")
+print("✅ consumer_grouped_study_processor: started'")
 def process_study(study_uid):
     entries = study_files.pop(study_uid, [])
     print(f"📦 Grouping complete for StudyUID: {study_uid}, files: {len(entries)}")

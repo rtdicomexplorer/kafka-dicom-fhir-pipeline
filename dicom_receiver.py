@@ -67,5 +67,5 @@ ae = AE(ae_title="RECEIVER_AE")
 for context in AllStoragePresentationContexts:
     ae.add_supported_context(context.abstract_syntax)
 
-print(f"📤 DICOM receiver: started: {11112}")
+print(f"✅ DICOM receiver started: listen: {11112}")
 ae.start_server(('0.0.0.0', 11112), evt_handlers=handlers)

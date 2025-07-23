@@ -37,7 +37,7 @@ consumer = KafkaConsumer(
     value_deserializer=lambda m: json.loads(m.decode('utf-8'))
 )
 
-print("Consumer uploader: started")
+print("✅ consumer_fhir_uploader: started'")
 print("👂 Waiting for messages on topic 'imaging.study.ready'...")
 
 def parse_patient_name(name_str):
