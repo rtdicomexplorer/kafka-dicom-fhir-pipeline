@@ -17,8 +17,43 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     depends_on:
+      - zookeeper
+
+
+  dicom_receiver:
+    build: .
+    command: python dicom_receiver.py
+    ports:
+      - "11112:11112"
+    volumes:
+      - ./received_dicoms:/app/received_dicoms
+    depends_on:
+      - kafka
+      - zookeeper
+
+  grouped_study_processor:
+    build: .
+    command: python consumer_grouped_study_processor.py
+    depends_on:
+      - kafka
+      - zookeeper
+
+  fhir_uploader:
+    build: .
+    command: python consumer_fhir_uploader.py
+    volumes:
+      - ./bundles:/app/bundles
+    depends_on:
+      - kafka
+      - zookeeper
+
+  dlq_handler:
+    build: .
+    command: python consumer_dlq_handler.py
+    depends_on:
+      - kafka
       - zookeeper

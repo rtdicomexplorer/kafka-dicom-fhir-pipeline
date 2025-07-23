@@ -3,7 +3,9 @@ import json, os, requests
 from kafka_utils import run_consumer_loop
 import uuid
 from log_utils import setup_logger
-log = setup_logger("consumer_fhir_uploader", "consumer_fhir_uploader.log")
+
+from service_names import FHIR_UPLOADER
+log = setup_logger(FHIR_UPLOADER, f"{FHIR_UPLOADER}.log")
 FHIR_SERVER = "http://localhost:8080/fhir"
 
 consumer = KafkaConsumer(
@@ -14,7 +16,7 @@ consumer = KafkaConsumer(
     group_id="fhir-uploader-group",
     value_deserializer=lambda m: json.loads(m.decode('utf-8'))
 )
-msg ="✅ consumer_fhir_uploader: started'"
+msg =f"✅ {FHIR_UPLOADER}: started'"
 log.info(msg)
 print(msg)
 print("👂 Waiting for messages on topic 'imaging.study.ready'...")
@@ -120,4 +122,4 @@ def handle_message(msg):
         print(f"❌ Upload failed ({res.status_code}): {res.text}")
         log.info(f"❌ Upload failed ({res.status_code}): {res.text}")
 
-run_consumer_loop(consumer, handle_message, name="FHIR Uploader")
+run_consumer_loop(consumer, handle_message, name=FHIR_UPLOADER)

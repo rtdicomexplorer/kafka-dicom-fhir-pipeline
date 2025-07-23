@@ -9,7 +9,9 @@ import sys
 import io
 
 from log_utils import setup_logger
-log = setup_logger("dicom_receiver", "dicom_receiver.log")
+
+from service_names import RECEIVER
+log = setup_logger(RECEIVER, f"{RECEIVER}.log")
 
 # Force UTF-8 output (for Windows terminal support)
 # sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
@@ -63,7 +65,7 @@ def handle_store(event):
 
         producer.send("imaging.raw", kafka_event)
         producer.flush()
-        
+
         log.info(f"📤 Step 3: Sent message to Kafka topic 'imaging.raw'")
         print(f"📤 Step 3: Sent message to Kafka topic 'imaging.raw'")
     except Exception as e:
@@ -79,7 +81,7 @@ ae = AE(ae_title="RECEIVER_AE")
 for context in AllStoragePresentationContexts:
     ae.add_supported_context(context.abstract_syntax)
 
-msg =f"✅ DICOM receiver started: listen: {11112}"
+msg =f"✅ {RECEIVER} started: listen: {11112}"
 log.info(msg)
 print(msg)
 ae.start_server(('0.0.0.0', 11112), evt_handlers=handlers)

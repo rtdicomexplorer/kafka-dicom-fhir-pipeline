@@ -2,8 +2,11 @@ from kafka import KafkaConsumer
 import json
 from kafka_utils import run_consumer_loop
 from log_utils import setup_logger
-log = setup_logger("consumer_dlq_handler", "consumer_dlq_handler.log")
-log.info(f"✅  DLQ consumer started")
+from service_names import DLQ_HANDLER
+log = setup_logger(DLQ_HANDLER, f"{DLQ_HANDLER}.log")
+log.info(f"✅ {DLQ_HANDLER}  started")
+
+#in docker you need to use kafka instead localhost
 consumer = KafkaConsumer(
     "imaging.dlq",
     bootstrap_servers='localhost:9092',
@@ -19,4 +22,4 @@ def handle_message(msg):
     print(log_txt)
     log.info(log_txt)
 
-run_consumer_loop(consumer, handle_message, name="DLQ Handler")
+run_consumer_loop(consumer, handle_message, name=DLQ_HANDLER)

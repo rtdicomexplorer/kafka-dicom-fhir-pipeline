@@ -5,7 +5,9 @@ import json, time, os, threading
 from kafka_utils import run_consumer_loop
 
 from log_utils import setup_logger
-log = setup_logger("consumer_grouped_study_processor", "consumer_grouped_study_processor.log")
+from service_names import STUDY_GROUPER
+
+log = setup_logger(STUDY_GROUPER, f"{STUDY_GROUPER}.log")
 
 
 
@@ -28,8 +30,10 @@ producer = KafkaProducer(
 
 study_files = {}
 study_cache = TTLCache(maxsize=100, ttl=30)  # TTL to auto-clear if inactive for 10 seconds
-print("✅ consumer_grouped_study_processor: started'")
-log.info("✅ consumer_grouped_study_processor: started'")
+
+txt_log = f"✅ {STUDY_GROUPER}: started"
+print(txt_log)
+log.info(txt_log)
 def process_study(study_uid):
     entries = study_files.pop(study_uid, [])
     print(f"📦 Grouping complete for StudyUID: {study_uid}, files: {len(entries)}")
@@ -98,4 +102,4 @@ def handle_message(msg):
 
 
 
-run_consumer_loop(consumer, handle_message, name="Study Grouper")
+run_consumer_loop(consumer, handle_message, name=STUDY_GROUPER)

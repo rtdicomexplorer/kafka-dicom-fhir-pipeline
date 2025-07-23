@@ -3,26 +3,28 @@ import time
 import os
 import threading
 import signal
+from flask import Flask, jsonify, abort, Response, request
+from service_names import DLQ_HANDLER,FHIR_UPLOADER,RECEIVER,STUDY_GROUPER
 
 # Ensure logs/ directory exists
 os.makedirs("logs", exist_ok=True)
 
 services = {
-    "Receiver": {
+    RECEIVER: {
         "cmd": "python dicom_receiver.py",
-        "log": "logs/receiver.log"
+        "log": f"logs/{RECEIVER}.log"
     },
-    "Study Grouper": {
+    STUDY_GROUPER: {
         "cmd": "python consumer_grouped_study_processor.py",
-        "log": "logs/grouper.log"
+        "log": f"logs/{STUDY_GROUPER}.log"
     },
-    "FHIR Uploader": {
+    FHIR_UPLOADER: {
         "cmd": "python consumer_fhir_uploader.py",
-        "log": "logs/uploader.log"
+        "log": f"logs/{FHIR_UPLOADER}.log"
     },
-    "DLQ Handler": {
+    DLQ_HANDLER: {
         "cmd": "python consumer_dlq_handler.py",
-        "log": "logs/dlq_handler.log"
+        "log": f"logs/{DLQ_HANDLER}.log"
     }
 }
 
@@ -59,6 +61,15 @@ def monitor_service(name, config):
             print(f"⚠️  {name} exited. Restarting in 5 seconds...")
             time.sleep(5)
 
+
+def check_status():
+    status = {}
+    for name, proc in processes.items():
+        retcode = proc.poll()  # None if still running
+        status[name] = "running" if retcode is None else f"stopped (exit code {retcode})"
+    return status
+
+
 def shutdown(signum=None, frame=None):
     global running
     print("\n🛑 Shutting down all services...")
@@ -70,17 +81,107 @@ def shutdown(signum=None, frame=None):
     print("👋 Shutdown complete.")
     exit(0)
 
-# Handle Ctrl+C or kill
-signal.signal(signal.SIGINT, shutdown)
-signal.signal(signal.SIGTERM, shutdown)
+# Flask app setup
+app = Flask(__name__)
 
-print("🚀 Starting DICOM-to-FHIR pipeline with auto-restart and UTF-8 logs...")
+@app.route("/status")
+def status_endpoint():
+    return jsonify(check_status())
 
-# Start threads
-for name, config in services.items():
-    t = threading.Thread(target=monitor_service, args=(name, config), daemon=True)
-    t.start()
 
-# Main loop
-while True:
-    time.sleep(10)
+@app.route("/services")
+def list_services():
+    status = check_status()
+    return jsonify({
+        name: {
+            "status": status.get(name, "unknown"),
+            "cmd": config["cmd"],
+            "log": config["log"]
+        }
+        for name, config in services.items()
+    })
+
+@app.route("/logs/<service_name>")
+def get_logs(service_name):
+    if service_name not in services:
+        abort(404, description="Service not found")
+    try:
+        with open(services[service_name]["log"], "r", encoding="utf-8") as f:
+            logs = f.read()
+        return Response(logs, mimetype="text/plain")
+    except Exception as e:
+        abort(500, description=str(e))
+
+@app.route("/restart/<service_name>", methods=["POST"])
+def restart_service(service_name):
+    if service_name not in services:
+        abort(404, description="Service not found")
+    proc = processes.get(service_name)
+    if proc:
+        proc.terminate()
+        return jsonify({"message": f"{service_name} restarting"}), 202
+    else:
+        return jsonify({"message": f"{service_name} not running"}), 400
+
+@app.route("/shutdown", methods=["POST"])
+def shutdown_server():
+    def shutdown_thread():
+        time.sleep(1)
+        shutdown()
+    threading.Thread(target=shutdown_thread).start()
+    return jsonify({"message": "Shutdown initiated"}), 202
+
+
+
+
+
+
+def start_http_server():
+    app.run(host="0.0.0.0", port=8085, debug=False, use_reloader=False)
+
+
+
+def main():
+    global running
+
+    signal.signal(signal.SIGINT, shutdown)
+    signal.signal(signal.SIGTERM, shutdown)
+
+    print("🚀 Starting DICOM-to-FHIR pipeline with auto-restart and UTF-8 logs...")
+
+    # Start service monitor threads
+    for name, config in services.items():
+        t = threading.Thread(target=monitor_service, args=(name, config), daemon=True)
+        t.start()
+
+    # Start Flask HTTP server thread
+    http_thread = threading.Thread(target=start_http_server, daemon=True)
+    http_thread.start()
+    print("🌐 HTTP status server started at http://localhost:8085/status")
+
+    # Main loop to keep script running
+    while True:
+        time.sleep(10)
+
+
+
+if __name__ == "__main__":
+    main()
+
+# # Handle Ctrl+C or kill
+# signal.signal(signal.SIGINT, shutdown)
+# signal.signal(signal.SIGTERM, shutdown)
+
+# print("🚀 Starting DICOM-to-FHIR pipeline with auto-restart and UTF-8 logs...")
+
+# # Start threads
+# for name, config in services.items():
+#     t = threading.Thread(target=monitor_service, args=(name, config), daemon=True)
+#     t.start()
+
+
+
+
+# # Main loop
+# while True:
+#     time.sleep(10)
