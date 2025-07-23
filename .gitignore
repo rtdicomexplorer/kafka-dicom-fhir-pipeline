@@ -3,3 +3,4 @@ __pycache__
 received_dicoms
 bundles
 study_folder
+logs

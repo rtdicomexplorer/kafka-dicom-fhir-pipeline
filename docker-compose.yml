@@ -1,12 +1,17 @@
-version: '2'
+version: '3.9'
+name: kafka-pipeline
 services:
   zookeeper:
     image: confluentinc/cp-zookeeper:7.6.0
+    container_name: zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
+    ports:
+      - "2181:2181"
 
   kafka:
     image: confluentinc/cp-kafka:7.6.0
+    container_name: kafka
     ports:
       - "9092:9092"
     environment:
@@ -15,3 +20,5 @@ services:
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    depends_on:
+      - zookeeper

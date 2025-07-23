@@ -1,14 +1,19 @@
 # batch_send_by_study.py
 # the main script 
 import os
+import json
 import time
 from collections import defaultdict
 from pydicom import dcmread
 from dicom_sender import send_dicom_file  # Import function
+from kafka import KafkaProducer
 
-STUDY_FOLDER = "./study_folder"
+STUDY_FOLDER =  "./study_folder" # r"C:\challenge_testdata\test"
 DELAY_BETWEEN_GROUPS = 3  # seconds between studies
-
+producer = KafkaProducer(
+    bootstrap_servers='localhost:9092',
+    value_serializer=lambda m: json.dumps(m).encode('utf-8')
+)
 
 def group_dicoms_by_study(folder):
     study_map = defaultdict(list)
@@ -27,6 +32,17 @@ def group_dicoms_by_study(folder):
                 print(f"⚠️ Could not read {f}: {e}")
     return study_map
 
+from datetime import datetime
+
+def send_study_complete_event(producer, study_uid):
+    complete_event = {
+        "study_uid": study_uid,
+        "event_type": "study_complete",
+        "timestamp": datetime.utcnow().isoformat()
+    }
+    producer.send("imaging.raw", complete_event)
+    producer.flush()
+    print(f"📢 Sent study_complete event for StudyUID: {study_uid}")
 
 def main():
     study_groups = group_dicoms_by_study(STUDY_FOLDER)
@@ -37,6 +53,8 @@ def main():
         for f in files:
             send_dicom_file(f)
         print(f"✅ Finished sending study: {study_uid}")
+
+        send_study_complete_event(producer, study_uid)
         time.sleep(DELAY_BETWEEN_GROUPS)
 
 if __name__ == "__main__":

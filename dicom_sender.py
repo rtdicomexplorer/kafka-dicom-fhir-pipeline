@@ -4,15 +4,14 @@ import sys
 from pydicom import dcmread
 from pynetdicom import AE
 from pynetdicom.sop_class import CTImageStorage, MRImageStorage
-
+from pynetdicom.presentation import StoragePresentationContexts
 REMOTE_HOST = "localhost"
 REMOTE_PORT = 11112
 AE_TITLE = "MODALITY"
 
 def send_dicom_file(filepath):
     ae = AE(ae_title=AE_TITLE)
-    ae.add_requested_context(CTImageStorage)
-    ae.add_requested_context(MRImageStorage)
+    ae.requested_contexts = StoragePresentationContexts[:]
 
     assoc = ae.associate(REMOTE_HOST, REMOTE_PORT)
 
@@ -25,10 +24,10 @@ def send_dicom_file(filepath):
         sop_uid = getattr(ds, "SOPInstanceUID", "unknown")
         print(f"📤 Sending file: {os.path.basename(filepath)} (SOPInstanceUID={sop_uid})")
         status = assoc.send_c_store(ds)
-        if status:
-            print(f"✅ Sent - Status: 0x{status.Status:04x}")
-        else:
+        if status is None:
             print("❌ Failed to send file.")
+        # else:
+        #     print("❌ Failed to send file.")
     except Exception as e:
         print(f"⚠️ Error: {e}")
     finally:

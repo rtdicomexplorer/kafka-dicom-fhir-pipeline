@@ -5,6 +5,14 @@ from kafka import KafkaProducer
 import os
 import json
 from datetime import datetime
+import sys
+import io
+
+from log_utils import setup_logger
+log = setup_logger("dicom_receiver", "dicom_receiver.log")
+
+# Force UTF-8 output (for Windows terminal support)
+# sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 SAVE_DIR = "./received_dicoms"
 
@@ -39,6 +47,7 @@ def handle_store(event):
 
     ds.save_as(filename, write_like_original=False)
     print(f"📥 Received DICOM for Patient {patient_id}, saved to {filename}")
+    log.info(f"✅ DICOM receiver started: listen: {11112}")
 
     kafka_event = {
         "patient_id": patient_id,
@@ -54,9 +63,12 @@ def handle_store(event):
 
         producer.send("imaging.raw", kafka_event)
         producer.flush()
-        print(f"📤 Step 3: Sent message to Kafka topic 'imaging.raw': {kafka_event}")
+        
+        log.info(f"📤 Step 3: Sent message to Kafka topic 'imaging.raw'")
+        print(f"📤 Step 3: Sent message to Kafka topic 'imaging.raw'")
     except Exception as e:
         print(e)
+        log.error("❌ Something went wrong", exc_info=True)
 
     return 0x0000  # Success status
 
@@ -67,5 +79,7 @@ ae = AE(ae_title="RECEIVER_AE")
 for context in AllStoragePresentationContexts:
     ae.add_supported_context(context.abstract_syntax)
 
-print(f"✅ DICOM receiver started: listen: {11112}")
+msg =f"✅ DICOM receiver started: listen: {11112}"
+log.info(msg)
+print(msg)
 ae.start_server(('0.0.0.0', 11112), evt_handlers=handlers)

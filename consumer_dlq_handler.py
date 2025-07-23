@@ -1,15 +1,11 @@
-from kafka import KafkaConsumer, KafkaProducer
+from kafka import KafkaConsumer
 import json
-import os
-import time
-
-# Topics
-DLQ_TOPIC = "imaging.failed"
-RETRY_TOPIC = "imaging.study.ready"  # original topic
-
-# Kafka setup
+from kafka_utils import run_consumer_loop
+from log_utils import setup_logger
+log = setup_logger("consumer_dlq_handler", "consumer_dlq_handler.log")
+log.info(f"✅  DLQ consumer started")
 consumer = KafkaConsumer(
-    DLQ_TOPIC,
+    "imaging.dlq",
     bootstrap_servers='localhost:9092',
     auto_offset_reset='earliest',
     enable_auto_commit=True,
@@ -17,31 +13,10 @@ consumer = KafkaConsumer(
     value_deserializer=lambda m: json.loads(m.decode('utf-8'))
 )
 
-producer = KafkaProducer(
-    bootstrap_servers='localhost:9092',
-    value_serializer=lambda m: json.dumps(m).encode('utf-8')
-)
+def handle_message(msg):
+    event = msg.value
+    log_txt =  f"📡  DLQ received event: {event}"
+    print(log_txt)
+    log.info(log_txt)
 
-print("✅ consumer_dlq_handler: started'")
-print(f"🛠️ DLQ handler started. Listening on '{DLQ_TOPIC}'...")
-
-
-
-for msg in consumer:
-    failed_study = msg.value
-
-    print("\n❗ Failed Study Received from DLQ:")
-    print(json.dumps(failed_study, indent=2))
-
-    user_input = input("\n➡️ Retry this message? (y = yes, s = skip, q = quit): ").strip().lower()
-    if user_input == "y":
-        producer.send(RETRY_TOPIC, failed_study)
-        producer.flush()
-        print("✅ Message re-sent to 'imaging.study.ready'.")
-    elif user_input == "q":
-        print("👋 Exiting DLQ handler.")
-        break
-    else:
-        print("⏭️ Skipping this message.")
-
-
+run_consumer_loop(consumer, handle_message, name="DLQ Handler")
