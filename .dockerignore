@@ -1,3 +1,43 @@
 received_dicoms
 bundles
 logs
+# Byte-compiled / cache files
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Logs
+*.log
+logs/
+*.out
+
+# Environment / config
+.env
+.env.*
+
+# OS / Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Git
+.git
+.gitignore
+
+# Python virtual environments
+venv/
+.env/
+
+# Test data and temp files
+*.bak
+*.tmp
+*.swp
+
+# Local bundles and received files
+received_dicoms/
+bundles/
+
+# Docker-related
+.dockerignore
+Dockerfile~

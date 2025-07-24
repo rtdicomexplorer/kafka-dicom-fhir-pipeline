@@ -1,5 +1,4 @@
 # batch_send_by_study.py
-# the main script 
 import os
 import json
 import time
@@ -8,7 +7,7 @@ from pydicom import dcmread
 from dicom_sender import send_dicom_file  # Import function
 from kafka import KafkaProducer
 
-STUDY_FOLDER =  "./study_folder" # r"C:\challenge_testdata\test"
+STUDY_FOLDER =  "./study_folder/testdata" # r"C:\challenge_testdata\test"
 DELAY_BETWEEN_GROUPS = 3  # seconds between studies
 producer = KafkaProducer(
     bootstrap_servers='localhost:9092',

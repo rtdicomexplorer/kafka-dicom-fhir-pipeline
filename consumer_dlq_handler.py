@@ -3,13 +3,17 @@ import json
 from kafka_utils import run_consumer_loop
 from log_utils import setup_logger
 from service_names import DLQ_HANDLER
+from dotenv import load_dotenv
+import os
 log = setup_logger(DLQ_HANDLER, f"{DLQ_HANDLER}.log")
 log.info(f"✅ {DLQ_HANDLER}  started")
+load_dotenv(override=True)
 
+bootstrap_servers = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
 #in docker you need to use kafka instead localhost
 consumer = KafkaConsumer(
     "imaging.dlq",
-    bootstrap_servers='localhost:9092',
+    bootstrap_servers=bootstrap_servers,
     auto_offset_reset='earliest',
     enable_auto_commit=True,
     group_id="dlq-handler-group",

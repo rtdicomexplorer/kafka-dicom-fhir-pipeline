@@ -8,4 +8,4 @@ pynetdicom==3.0.3
 requests==2.32.4
 urllib3==2.5.0
 flask
-
+python-dotenv 
