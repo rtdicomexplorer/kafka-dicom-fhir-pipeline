@@ -104,4 +104,21 @@ It uses Kafka to orchestrate decoupled stages and ensures resilience with retry 
 | FHIR Bundle    | JSON, `requests`               |
 | Resilience     | Retry logic, DLQ, TTL grouping |
 
+## 📖 Citation
+
+If you use this code or part of it in your research, please cite:
+
+[Michele, Bufano], *Kafka DICOM to FHIR pipeline*, GitHub Repository, https://github.com/rtdicomexplorer/kafka-dicom-fhir-pipeline
+
+BibTeX:
+
+```bibtex
+@misc{kafka-dicom-fhir-pipeline_2025,
+  author       = {Michele Bufano},
+  title        = {Kafka DICOM FHIR pipeline},
+  year         = 2025,
+  publisher    = {GitHub},
+  journal      = {GitHub repository},
+  howpublished = {\url{https://github.com/rtdicomexplorer/kafka-dicom-fhir-pipeline}},
+}
 
