@@ -4,33 +4,38 @@ It uses Kafka to orchestrate decoupled stages and ensures resilience with retry 
 
 ### Architecture Overview
 
-           ┌────────────────┐
-           │  batch_send_by │
-           │   _study.py    │
-           └──────┬─────────┘
-                  │ (C-STORE over DICOM)
-                  ▼
-           ┌────────────────┐
-           │ dicom_receiver │
-           └──────┬─────────┘
-                  │
-                  │ Kafka: imaging.raw
-                  ▼
-        ┌────────────────────────────┐
-        │ consumer_grouped_study_    │
-        │ processor (study grouper)  │
-        └──────┬───────────┬──────── ┘
-               │           │
-               │           └─>Missing file -> DLQ
-               │
-               │ Kafka: imaging.study.ready
-               ▼
-       ┌────────────────────────────┐
-       │ consumer_fhir_uploader     │
-       └──────────┬─────────────────┘
-                  │
-                  ▼
-            FHIR Server (HAPI)
+                              +------------------------+
+                              |  batch_send_by_study.py|
+                              +-----------+------------+
+                                          |
+                                          v
+                               +----------v-----------+
+                               |   dicom_receiver.py   |
+                               +----------+-----------+
+                                          |
+                                          v
+                       +------------------v------------------+
+                       | consumer_grouped_study_processor.py |
+                       +-----------+--------------+----------+
+                                   |              |
+                  +----------------v--+       +---v----------------+
+                  | consumer_fhir_uploader.py  | consumer_dlq_handler.py
+                  +------------------+         +------------------+
+                             |                          |
+                             v                          v
+                 +-----------v-----------+    +---------v--------+
+                 |     FHIR Server       |    |   DLQ (Kafka)    |
+                 |    (e.g., HAPI)       |    +------------------+
+                 +-----------------------+
+
+                    ▲         ▲         ▲         ▲
+                    |         |         |         |
+        +-----------+---------+---------+---------+-------------+
+        |             run_pipeline.py (Flask Dashboard)         |
+        |  - Monitors services                                   |
+        |  - Provides /status, logs, stop/start controls         |
+        +--------------------------------------------------------+
+
 
 
 
