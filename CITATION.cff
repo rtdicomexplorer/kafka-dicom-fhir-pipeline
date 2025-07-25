@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Bufano"
+  given-names: "Michele"
+  orcid: "https://orcid.org/0009-0000-5067-9814"
+title: "kafka-dicom-fhir-pipeline"
+version: 1.0.0
+date-released: 2025-07-25
+url: "https://github.com/rtdicomexplorer/kafka-dicom-fhir-pipeline"
