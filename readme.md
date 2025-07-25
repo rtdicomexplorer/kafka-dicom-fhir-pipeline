@@ -2,7 +2,7 @@
 This system ingests DICOM files, extracts metadata, groups them into studies, and converts them into FHIR ImagingStudy bundles to send to a FHIR server. 
 It uses Kafka to orchestrate decoupled stages and ensures resilience with retry + dead-letter queue logic.
 
-### Architecture Overview
+### Architecture Overview   ![Pipeline Architecture](figures/dicom_pipeline_graph.png)
 
                               +------------------------+
                               |  batch_send_by_study.py|
