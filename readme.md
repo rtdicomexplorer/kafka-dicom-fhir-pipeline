@@ -40,9 +40,10 @@ It uses Kafka to orchestrate decoupled stages and ensures resilience with retry 
 ## How to use it:
 1. docker compose up -d   
      - to start in docker the kafka broker
-2. python run_pipeline.py
+2. pip install -r requirements.txt 
+3. python run_pipeline.py
      - to start the services, also the end point http://localhost:5000
-3. python batch_send_by_study
+4. python batch_send_by_study
      - to start the dicom send process
 
 ### Full Workflow
