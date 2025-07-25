@@ -25,8 +25,6 @@ consumer = KafkaConsumer(
 )
 msg =f"✅ {FHIR_UPLOADER}: started'"
 log.info(msg)
-print(msg)
-print("👂 Waiting for messages on topic 'imaging.study.ready'...")
 
 def parse_patient_name(name_str):
     parts = name_str.split("^")
@@ -144,19 +142,16 @@ def handle_message(msg):
         json.dump(bundle, f, indent=2)
 
     log.info(f"📤 Sending ImagingStudy bundle for {study['study_uid']}")
-    print(f"📤 Sending ImagingStudy bundle for {study['study_uid']}")
 
     try:
         res = requests.post(FHIR_SERVER, json=bundle, timeout=10)
         if res.status_code in [200, 201]:
-            log.info(f"✅ Uploaded to FHIR successfully: ImagingStudy bundle for {study['study_uid']}")
-            print("✅ Uploaded to FHIR")
+            log.info(f"⚠️ Uploaded to FHIR successfully: ImagingStudy bundle for {study['study_uid']}")
+
         else:
             log.warning(f"❌ Upload failed ({res.status_code}): {res.text}")
-            print(f"❌ Upload failed ({res.status_code}): {res.text}")
     except requests.RequestException as e:
         log.error("❌ Error posting to FHIR server, check if the server is online", exc_info=True)
-        print(f"❌ Error posting to FHIR server, check if the server is online")
 
 
 run_consumer_loop(consumer, handle_message, name=FHIR_UPLOADER)

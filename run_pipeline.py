@@ -82,13 +82,12 @@ def check_status():
 
 def shutdown(signum=None, frame=None):
     global running
-    print("\n🛑 Shutting down all services...")
     running = False
     for name, proc in processes.items():
         print(f"⛔ Terminating {name}...")
         service_should_restart[name] = False
         proc.terminate()
-    print("📁 Logs saved in ./logs/")
+   
     print("👋 Shutdown complete.")
     exit(0)
 
@@ -333,7 +332,7 @@ def main():
     # Start Flask HTTP server thread
     http_thread = threading.Thread(target=start_http_server, daemon=True)
     http_thread.start()
-    print(f"🌐 Dashboard at http://{FLASK_HOST}:{FLASK_PORT}/status")
+    print(f"🌐 Dashboard at http://{FLASK_HOST}:{FLASK_PORT}")
 
     # Main loop to keep script running
     while True:

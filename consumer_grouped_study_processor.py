@@ -2,7 +2,7 @@
 from kafka import KafkaConsumer, KafkaProducer
 from pydicom import dcmread
 from cachetools import TTLCache
-import json, time, os, threading
+import json, time, os
 from kafka_utils import run_consumer_loop
 
 from log_utils import setup_logger
@@ -37,7 +37,6 @@ study_files = {}
 study_cache = TTLCache(maxsize=100, ttl=30)  # TTL to auto-clear if inactive for 10 seconds
 
 txt_log = f"✅ {STUDY_GROUPER}: started"
-print(txt_log)
 log.info(txt_log)
 def process_study(study_uid):
     entries = study_files.pop(study_uid, [])
@@ -50,8 +49,6 @@ def process_study(study_uid):
     if not valid_entries:
         log.warning(f"⚠️ No valid DICOM files for StudyUID: {study_uid}")
         return
-
-    print(f"📦 Grouping complete for StudyUID: {study_uid}, files: {len(valid_entries)}")
     log.info(f"📦 Grouping complete for StudyUID: {study_uid}, files: {len(valid_entries)}")
 
     first = valid_entries[0]
@@ -64,10 +61,6 @@ def process_study(study_uid):
 
     instances = []
     for entry in valid_entries:
-        # if not os.path.exists(entry["dicom_file_path"]):
-        #     print(f"⚠️ Missing file: {entry['dicom_file_path']}")
-        #     log.warning(f"⚠️ Missing file: {entry['dicom_file_path']}")
-        #     continue
         try:
             ds = dcmread(entry["dicom_file_path"])
         except Exception as e:
@@ -98,10 +91,8 @@ def process_study(study_uid):
     try:
         producer.send("imaging.study.ready", output)
         producer.flush()
-        print(f"🚀 Sent grouped study to 'imaging.study.ready': {study_uid}")
         log.info(f"🚀 Sent grouped study to 'imaging.study.ready': {study_uid}")
     except Exception as e:
-        print(f"Kafka produce error: {e}")
         log.error(f"❌ Sent grouped study to 'imaging.study.ready': {study_uid}", exc_info=True)
 
 def handle_message(msg):
@@ -118,11 +109,10 @@ def handle_message(msg):
 
     study_uid = event.get("study_uid")
     if not study_uid:
-        print(f"⚠️ Missing study_uid in message: {event}")
+        log.warning(f"⚠️Missing study_uid in message: {event}")
         return
 
     if event_type == "study_complete":
-        print(f"📢 Received study_complete for: {study_uid}")
         log.info(f"📢 Received study_complete for: {study_uid}")
         process_study(study_uid)
         study_cache.pop(study_uid, None)

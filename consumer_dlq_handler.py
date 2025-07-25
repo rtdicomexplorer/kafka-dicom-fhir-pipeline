@@ -23,7 +23,6 @@ consumer = KafkaConsumer(
 def handle_message(msg):
     event = msg.value
     log_txt =  f"📡  DLQ received event: {event}"
-    print(log_txt)
     log.info(log_txt)
 
 run_consumer_loop(consumer, handle_message, name=DLQ_HANDLER)
