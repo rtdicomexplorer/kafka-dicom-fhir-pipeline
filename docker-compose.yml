@@ -23,51 +23,54 @@ services:
       - zookeeper
 
 
-  # dicom_receiver:
-  #   build: .
-  #   command: python dicom_receiver.py
-  #   ports:
-  #     - "11112:11112"
-  #   volumes:
-  #     - ./received_dicoms:/app/received_dicoms
-  #   depends_on:
-  #     - kafka
-  #     - zookeeper
+#   dicom_receiver:
+#     build: .
+#     command: python dicom_receiver.py
+#     ports:
+#       - "11112:11112"
+#     volumes:
+#       - ./received_dicoms:/app/received_dicoms
+#     depends_on:
+#       - kafka
+#       - zookeeper
     
 
-  # grouped_study_processor:
-  #   build: .
-  #   command: python consumer_grouped_study_processor.py
-  #   depends_on:
-  #     - kafka
-  #     - zookeeper
+#   grouped_study_processor:
+#     build: .
+#     command: python consumer_grouped_study_processor.py
+#     depends_on:
+#       - kafka
+#       - zookeeper
 
-  # fhir_uploader:
-  #   build: .
-  #   command: python consumer_fhir_uploader.py
-  #   volumes:
-  #     - ./bundles:/app/bundles
-  #   depends_on:
-  #     - kafka
-  #     - zookeeper
+#   fhir_uploader:
+#     build: .
+#     command: python consumer_fhir_uploader.py
+#     volumes:
+#       - ./bundles:/app/bundles
+#     depends_on:
+#       - kafka
+#       - zookeeper
 
-  # dlq_handler:
-  #   build: .
-  #   command: python consumer_dlq_handler.py
-  #   depends_on:
-  #     - kafka
-  #     - zookeeper
+#   dlq_handler:
+#     build: .
+#     command: python consumer_dlq_handler.py
+#     depends_on:
+#       - kafka
+#       - zookeeper
 
-  # api_service:
-  #   build: .
-  #   command: python run_pipeline.py
-  #   ports:
-  #     - "${FLASK_PORT}:${FLASK_PORT}"
-  #   environment:
-  #     - FLASK_HOST=${FLASK_HOST}
-  #     - FLASK_PORT=${FLASK_PORT}
-  #     - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS}
-  #   depends_on:
-  #     - kafka
-  #     - zookeeper
+#   api_service:
+#     build: .
+#     command: python run_pipeline.py
+#     ports:
+#       - "${FLASK_PORT}:${FLASK_PORT}"
+#     environment:
+#       - FLASK_HOST=${FLASK_HOST}
+#       - FLASK_PORT=${FLASK_PORT}
+#       - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS}
+#     depends_on:
+#       - kafka
+#       - zookeeper
+# volumes:
+#   dicom_storage:
+#   bundle_output:
 
